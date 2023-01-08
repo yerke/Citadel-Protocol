@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["group_invite","Given a group invite signal, this function sends a response to the server"],["peer_connect","Given the `input_signal` from the peer, this function sends a connect response to the target peer"],["peer_register","Given the `input_signal` from the peer, this function sends a register response to the target peer"]]};

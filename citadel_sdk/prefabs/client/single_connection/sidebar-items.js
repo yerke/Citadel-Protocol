@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["SingleClientServerConnectionKernel","A kernel that connects with the given credentials. If the credentials are not yet registered, then the [`Self::new_register`] function may be used, which will register the account before connecting. This kernel will only allow outbound communication for the provided account."]]};

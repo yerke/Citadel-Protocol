@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ClientConnectListenerKernel","A kernel that executes a user-provided function each time a client makes a connection"]]};

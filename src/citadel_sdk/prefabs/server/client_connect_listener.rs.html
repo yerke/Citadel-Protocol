@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `citadel_sdk/src/prefabs/server/client_connect_listener.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client_connect_listener.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../citadel_sdk/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<span id="2">2</span>
+<span id="3">3</span>
+<span id="4">4</span>
+<span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::prefabs::ClientServerRemote;
+<span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>citadel_proto::prelude::async_trait;
+<span class="kw">use </span>futures::Future;
+<span class="kw">use </span>std::marker::PhantomData;
+
+<span class="doccomment">/// A kernel that executes a user-provided function each time
+/// a client makes a connection
+</span><span class="kw">pub struct </span>ClientConnectListenerKernel&lt;F, Fut&gt; {
+    on_channel_received: F,
+    node_remote: <span class="prelude-ty">Option</span>&lt;NodeRemote&gt;,
+    _pd: PhantomData&lt;Fut&gt;,
+}
+
+<span class="kw">impl</span>&lt;F, Fut&gt; ClientConnectListenerKernel&lt;F, Fut&gt;
+<span class="kw">where
+    </span>F: Fn(ConnectionSuccess, ClientServerRemote) -&gt; Fut + Send + Sync,
+    Fut: Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt;&gt; + Send + Sync,
+{
+    <span class="kw">pub fn </span>new(on_channel_received: F) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            on_channel_received,
+            node_remote: <span class="prelude-val">None</span>,
+            _pd: Default::default(),
+        }
+    }
+}
+
+<span class="attribute">#[async_trait]
+</span><span class="kw">impl</span>&lt;F, Fut&gt; NetKernel <span class="kw">for </span>ClientConnectListenerKernel&lt;F, Fut&gt;
+<span class="kw">where
+    </span>F: Fn(ConnectionSuccess, ClientServerRemote) -&gt; Fut + Send + Sync,
+    Fut: Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt;&gt; + Send + Sync,
+{
+    <span class="kw">fn </span>load_remote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, server_remote: NodeRemote) -&gt; <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt; {
+        <span class="self">self</span>.node_remote = <span class="prelude-val">Some</span>(server_remote);
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>on_start(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>on_node_event_received(<span class="kw-2">&amp;</span><span class="self">self</span>, message: NodeResult) -&gt; <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt; {
+        <span class="kw">match </span>message {
+            NodeResult::ConnectSuccess(ConnectSuccess {
+                ticket: <span class="kw">_</span>,
+                implicated_cid: cid,
+                remote_addr: <span class="kw">_</span>,
+                is_personal: <span class="kw">_</span>,
+                v_conn_type: conn_type,
+                services,
+                welcome_message: <span class="kw">_</span>,
+                channel,
+                udp_rx_opt: udp_channel_rx,
+            }) =&gt; {
+                <span class="kw">let </span>client_server_remote = ClientServerRemote {
+                    inner: <span class="self">self</span>.node_remote.clone().unwrap(),
+                    unprocessed_signals_rx: Default::default(),
+                    conn_type,
+                };
+                (<span class="self">self</span>.on_channel_received)(
+                    ConnectionSuccess {
+                        channel,
+                        udp_channel_rx,
+                        services,
+                        cid,
+                    },
+                    client_server_remote,
+                )
+                .<span class="kw">await
+            </span>}
+
+            other =&gt; {
+                <span class="macro">log::trace!</span>(target: <span class="string">&quot;citadel&quot;</span>, <span class="string">&quot;Unhandled server signal: {:?}&quot;</span>, other);
+                <span class="prelude-val">Ok</span>(())
+            }
+        }
+    }
+
+    <span class="kw">async fn </span>on_stop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), NetworkError&gt; {
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+</code></pre></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="citadel_sdk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0 (69f9c33d7 2022-12-12)" ></div></body></html>

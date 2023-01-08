@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["client","Kernels for clients"],["server","Kernels for servers"]],"struct":[["ClientServerRemote","A limited version of the [`NodeRemote`] designed to only allow shutdown calls to the protocol as well as several other functions"]]};

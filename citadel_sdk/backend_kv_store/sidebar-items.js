@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"trait":[["BackendHandler","Contains a trait for persisting application-level data in a K,V store that is unique for this particular connection"]]};
